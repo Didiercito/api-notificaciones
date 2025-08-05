@@ -6,6 +6,7 @@ require('dotenv').config();
 const productosRoutes = require('./src/routes/productos');
 const usuariosRoutes = require('./src/routes/usuarios');
 const authRoutes = require('./src/routes/auth');
+const fcmRouter  = require('./src/routes/fcm')
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,6 +19,7 @@ app.use(morgan('dev'));
 app.use('/api/auth', authRoutes);
 app.use('/api/productos', productosRoutes);
 app.use('/api/usuarios', usuariosRoutes);
+app.use('/api/fcm', fcmRouter);
 
 async function startServer() {
     try {
