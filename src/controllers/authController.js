@@ -1,3 +1,5 @@
+// RUTA: src/controllers/authController.js
+
 const db = require('../config/database');
 const { generarToken } = require('../services/jwtService');
 const bcrypt = require('bcrypt');
@@ -6,6 +8,7 @@ const isValidEmail = (email) => {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 };
 
+// La función de registro no cambia
 const register = async (req, res) => {
   const { nombre, email, password, rol = 'familia' } = req.body;
 
@@ -67,8 +70,13 @@ const register = async (req, res) => {
   }
 };
 
+
+// ==========================================================
+// ===== ESTA ES LA FUNCIÓN ACTUALIZADA Y MÁS IMPORTANTE =====
+// ==========================================================
 const login = async (req, res) => {
-  const { email, password } = req.body;
+  // 1. AHORA RECIBIMOS TAMBIÉN el fcm_token
+  const { email, password, fcm_token } = req.body;
   
   if (!email || !password) {
     return res.status(400).json({ 
@@ -112,16 +120,29 @@ const login = async (req, res) => {
       });
     }
 
-const token = generarToken({
-  id: user.id,
-  email: user.email,
-  nombre: user.nombre, 
-  rol: user.rol
-});
-    await db.query(
-      'UPDATE usuarios SET ultimo_acceso = NOW() WHERE id = ?',
-      [user.id]
-    );
+    // 2. LÓGICA AÑADIDA: Si el login es correcto, guardamos el token FCM
+    if (fcm_token) {
+      console.log(`✅ Actualizando token FCM para ${user.nombre} durante el login...`);
+      // Usamos la columna 'token_fcm' que ya tienes en tu base de datos
+      await db.query(
+        'UPDATE usuarios SET token_fcm = ?, ultimo_acceso = NOW() WHERE id = ?',
+        [fcm_token, user.id]
+      );
+    } else {
+      // Si por alguna razón no viene el token, al menos actualizamos la fecha de acceso
+      await db.query(
+        'UPDATE usuarios SET ultimo_acceso = NOW() WHERE id = ?',
+        [user.id]
+      );
+    }
+
+    const token = generarToken({
+      id: user.id,
+      email: user.email,
+      nombre: user.nombre, 
+      rol: user.rol
+    });
+
     return res.json({
       success: true,
       token,
